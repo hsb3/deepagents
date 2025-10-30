@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import dotenv
+import yaml
 from rich.console import Console
 
 dotenv.load_dotenv()
@@ -93,9 +94,28 @@ def get_default_coding_instructions() -> str:
 
     These are the immutable base instructions that cannot be modified by the agent.
     Long-term memory (agent.md) is handled separately by the middleware.
+
+    Returns:
+        str: The system prompt for the coding agent.
+
+    Raises:
+        SystemExit: If the prompt file cannot be loaded or is malformed.
     """
-    default_prompt_path = Path(__file__).parent.parent / "default_agent_prompt.md"
-    return default_prompt_path.read_text()
+    try:
+        default_prompt_path = Path(__file__).parent / "default_agent_prompt.yml"
+        with default_prompt_path.open() as f:
+            prompt_config = yaml.safe_load(f)
+        return prompt_config["system_prompt"]
+    except FileNotFoundError:
+        console.print("[red]Error: default_agent_prompt.yml not found in package.[/red]")
+        console.print("[yellow]This indicates a packaging issue. Please reinstall deepagents-cli.[/yellow]")
+        sys.exit(1)
+    except KeyError:
+        console.print("[red]Error: 'system_prompt' key not found in default_agent_prompt.yml[/red]")
+        sys.exit(1)
+    except yaml.YAMLError as e:
+        console.print(f"[red]Error parsing default_agent_prompt.yml: {e}[/red]")
+        sys.exit(1)
 
 
 def create_model():
